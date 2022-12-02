@@ -1,0 +1,137 @@
+# AoC day 2
+
+```elixir
+Mix.install([:kino])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("in")
+```
+
+```elixir
+defmodule Game do
+  def read_input(input) do
+    Kino.Input.read(input)
+  end
+
+  def parse_string(values) do
+    values
+    |> String.split("\n")
+    |> Enum.map(&String.split(&1, " "))
+  end
+
+  def calculate(input) do
+    input
+    |> Enum.reduce(0, fn item, acc ->
+      points =
+        cond do
+          Game.is_draw(item) == true -> Game.draw_points()
+          Game.is_my_win(item) == true -> Game.win_points()
+          true -> Game.loss_points()
+        end
+
+      # IO.inspect(points + Game.symbol_points(Enum.at(item, 1)))
+      acc + points + Game.symbol_points(Enum.at(item, 1))
+    end)
+  end
+
+  def calculate_second(input) do
+    input
+    |> Enum.reduce(0, fn item, acc ->
+      item = Game.replace_shape(item)
+
+      points =
+        cond do
+          Game.is_draw(item) == true -> Game.draw_points()
+          Game.is_my_win(item) == true -> Game.win_points()
+          true -> Game.loss_points()
+        end
+
+      # IO.inspect(points + Game.symbol_points(Enum.at(item, 1)))
+      acc + points + Game.symbol_points(Enum.at(item, 1))
+    end)
+  end
+
+  def replace_shape(item) do
+    case item do
+      ["A", "X"] -> ["A", "Z"]
+      ["A", "Y"] -> ["A", "X"]
+      ["A", "Z"] -> ["A", "Y"]
+      ["B", "X"] -> ["B", "X"]
+      ["B", "Y"] -> ["B", "Y"]
+      ["B", "Z"] -> ["B", "Z"]
+      ["C", "X"] -> ["C", "Y"]
+      ["C", "Y"] -> ["C", "Z"]
+      ["C", "Z"] -> ["C", "X"]
+    end
+  end
+
+  def is_my_win(["A", "Y"]) do
+    true
+  end
+
+  def is_my_win(["B", "Z"]) do
+    true
+  end
+
+  def is_my_win(["C", "X"]) do
+    true
+  end
+
+  def is_my_win(_ch) do
+    false
+  end
+
+  def is_draw(["A", "X"]) do
+    true
+  end
+
+  def is_draw(["B", "Y"]) do
+    true
+  end
+
+  def is_draw(["C", "Z"]) do
+    true
+  end
+
+  def is_draw(_list) do
+    false
+  end
+
+  def win_points() do
+    6
+  end
+
+  def draw_points() do
+    3
+  end
+
+  def loss_points() do
+    0
+  end
+
+  def symbol_points("X") do
+    1
+  end
+
+  def symbol_points("Y") do
+    2
+  end
+
+  def symbol_points("Z") do
+    3
+  end
+end
+
+Game.read_input(input)
+|> Game.parse_string()
+|> Game.calculate()
+|> IO.inspect()
+
+Game.read_input(input)
+|> Game.parse_string()
+|> Game.calculate_second()
+|> IO.inspect()
+```
