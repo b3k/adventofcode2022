@@ -1,0 +1,54 @@
+# AoD day 3
+
+```elixir
+Mix.install([:kino])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input = Kino.Input.read(input)
+```
+
+```elixir
+letter_to_priority = fn _letter = <<code::utf8>> ->
+  cond do
+    code >= 65 && code <= 90 -> code - 38
+    code >= 97 && code <= 122 -> code - 96
+  end
+end
+```
+
+```elixir
+input
+|> String.split("\n")
+|> Enum.map(&String.split(&1, "", trim: true))
+|> Enum.map(&Enum.split(&1, trunc(Enum.count(&1) / 2)))
+|> Enum.map(fn item ->
+  Enum.find(elem(item, 0), nil, &Enum.member?(elem(item, 1), &1))
+end)
+|> Enum.map(&letter_to_priority.(&1))
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+input
+|> String.split("\n")
+|> Enum.map(&String.split(&1, "", trim: true))
+|> Enum.chunk_every(3)
+|> Enum.map(fn item ->
+  Enum.find(
+    Enum.at(item, 0),
+    nil,
+    &(Enum.member?(Enum.at(item, 1), &1) && Enum.member?(Enum.at(item, 2), &1))
+  )
+end)
+|> Enum.map(&letter_to_priority.(&1))
+|> Enum.sum()
+```
