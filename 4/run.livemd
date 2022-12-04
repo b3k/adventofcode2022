@@ -54,7 +54,7 @@ input
   |> Enum.map(&[String.to_integer(List.first(&1)), String.to_integer(List.last(&1))])
 end)
 |> Enum.reduce(0, fn i, acc ->
-  if is_overlaping.(List.first(i), List.last(i)) or is_in_range.(List.last(i), List.first(i)) do
+  if is_overlaping.(List.first(i), List.last(i)) do
     acc + 1
   else
     acc
