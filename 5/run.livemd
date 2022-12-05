@@ -1,0 +1,161 @@
+# Day 5: Supply Stacks
+
+```elixir
+Mix.install([:kino])
+```
+
+## Main
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input = Kino.Input.read(input)
+```
+
+```elixir
+parse_command = fn string when is_bitstring(string) ->
+  Regex.run(~r/move (\d+) from (\d+) to (\d+)/, string, capture: :all_but_first)
+  |> Enum.map(&String.to_integer(&1))
+end
+
+parse_state = fn state_string when is_bitstring(state_string) ->
+  state_list =
+    String.split(state_string, "\n")
+    |> Enum.map(&String.codepoints(&1))
+
+  {state_indexes, state_list} = List.pop_at(state_list, -1)
+  state_indexes = Enum.filter(state_indexes, &(&1 != " ")) |> Enum.map(&String.to_integer(&1))
+
+  # normalize state list
+  state_list =
+    Enum.map(state_list, &List.insert_at(&1, -1, " "))
+    |> Enum.map(&Enum.chunk_every(&1, 4))
+    |> Enum.map(fn item ->
+      Enum.map(item, fn state_item ->
+        Enum.filter(state_item, &(&1 not in [" ", "]", "["]))
+      end)
+    end)
+
+  # build proper state structure
+  Enum.reduce(state_indexes, %{}, fn index, state_map ->
+    Enum.reduce(state_list, state_map, fn state_line, state_map ->
+      value = List.first(Enum.at(state_line, index - 1))
+
+      {_val, state_map} =
+        Map.get_and_update(state_map, index, fn
+          nil -> {nil, value}
+          current_value -> {current_value, current_value <> value}
+        end)
+
+      state_map
+    end)
+  end)
+end
+
+move_objects = fn state, objects_count, from, to ->
+  old_objects_from = Map.get(state, from)
+  old_objects_to = Map.get(state, to)
+  {moving_objects, new_from_objects} = String.split_at(old_objects_from, objects_count)
+
+  Map.put(state, from, new_from_objects)
+  |> Map.put(to, String.reverse(moving_objects) <> old_objects_to)
+end
+```
+
+```elixir
+[state, instructions] = String.split(input, "\n\n")
+
+instructions =
+  String.split(instructions, "\n")
+  |> Enum.map(&parse_command.(&1))
+
+state = parse_state.(state)
+# IO.inspect(state)
+
+state =
+  Enum.reduce(instructions, state, fn [count, from, to] = instruction, state ->
+    state = move_objects.(state, count, from, to) |> IO.inspect()
+  end)
+
+# IO.inspect state
+
+Enum.map_join(1..length(Map.keys(state)), "", fn item ->
+  String.at(Map.get(state, item), 0)
+end)
+```
+
+## Part 2
+
+```elixir
+parse_command = fn string when is_bitstring(string) ->
+  Regex.run(~r/move (\d+) from (\d+) to (\d+)/, string, capture: :all_but_first)
+  |> Enum.map(&String.to_integer(&1))
+end
+
+parse_state = fn state_string when is_bitstring(state_string) ->
+  state_list =
+    String.split(state_string, "\n")
+    |> Enum.map(&String.codepoints(&1))
+
+  {state_indexes, state_list} = List.pop_at(state_list, -1)
+  state_indexes = Enum.filter(state_indexes, &(&1 != " ")) |> Enum.map(&String.to_integer(&1))
+
+  # normalize state list
+  state_list =
+    Enum.map(state_list, &List.insert_at(&1, -1, " "))
+    |> Enum.map(&Enum.chunk_every(&1, 4))
+    |> Enum.map(fn item ->
+      Enum.map(item, fn state_item ->
+        Enum.filter(state_item, &(&1 not in [" ", "]", "["]))
+      end)
+    end)
+
+  # build proper state structure
+  Enum.reduce(state_indexes, %{}, fn index, state_map ->
+    Enum.reduce(state_list, state_map, fn state_line, state_map ->
+      value = List.first(Enum.at(state_line, index - 1))
+
+      {_val, state_map} =
+        Map.get_and_update(state_map, index, fn
+          nil -> {nil, value}
+          current_value -> {current_value, current_value <> value}
+        end)
+
+      state_map
+    end)
+  end)
+end
+
+move_objects = fn state, objects_count, from, to ->
+  old_objects_from = Map.get(state, from)
+  old_objects_to = Map.get(state, to)
+  {moving_objects, new_from_objects} = String.split_at(old_objects_from, objects_count)
+
+  Map.put(state, from, new_from_objects)
+  |> Map.put(to, moving_objects <> old_objects_to)
+end
+```
+
+```elixir
+[state, instructions] = String.split(input, "\n\n")
+
+instructions =
+  String.split(instructions, "\n")
+  |> Enum.map(&parse_command.(&1))
+
+state = parse_state.(state)
+# IO.inspect(state)
+
+state =
+  Enum.reduce(instructions, state, fn [count, from, to] = instruction, state ->
+    state = move_objects.(state, count, from, to) |> IO.inspect()
+  end)
+
+# IO.inspect state
+
+Enum.map_join(1..length(Map.keys(state)), "", fn item ->
+  String.at(Map.get(state, item), 0)
+end)
+```
