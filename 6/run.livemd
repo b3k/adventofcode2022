@@ -1,0 +1,45 @@
+# Day 6: Tuning Trouble
+
+```elixir
+Mix.install([:kino])
+```
+
+## Main
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input = Kino.Input.read(input) |> String.codepoints()
+```
+
+```elixir
+Enum.reduce(1..(length(input) - 3), [], fn item, acc ->
+  elem = Enum.slice(input, item - 1, 4)
+
+  if length(Enum.uniq(elem)) == 4 do
+    [item + 3 | acc]
+  else
+    acc
+  end
+end)
+|> Enum.reverse()
+|> Enum.at(0)
+```
+
+## Part 2
+
+```elixir
+Enum.reduce(1..(length(input) - 13), [], fn item, acc ->
+  elem = Enum.slice(input, item - 1, 14)
+
+  if length(Enum.uniq(elem)) == 14 do
+    [item + 13 | acc]
+  else
+    acc
+  end
+end)
+|> Enum.reverse()
+|> Enum.at(0)
+```
