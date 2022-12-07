@@ -1,0 +1,97 @@
+# Day 7: No Space Left On Device
+
+```elixir
+Mix.install([:kino])
+```
+
+## Main
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input = Kino.Input.read(input)
+```
+
+```elixir
+state = %{:current_path => nil, :stack => []}
+
+parsed =
+  input
+  |> String.split(~r{\$ cd .+\n}, include_captures: true, trim: true)
+  |> Enum.reduce(state, fn item, state ->
+    item = String.trim(item)
+    current_path = state[:current_path]
+
+    case item do
+      "$ cd " <> path when current_path == nil ->
+        %{state | :current_path => Path.expand(path)}
+
+      "$ cd " <> path when current_path != nil ->
+        %{state | :current_path => Path.expand(state[:current_path] <> "/" <> path)}
+
+      "$ ls\n" <> list ->
+        elems = String.split(list, "\n") |> Enum.filter(&(!(&1 =~ ~r/dir .+/)))
+        %{state | :stack => [%{:path => state[:current_path], :data => elems} | state[:stack]]}
+
+      _ ->
+        IO.inspect("Won't match ")
+    end
+  end)
+
+pathsizes =
+  Enum.reduce(parsed[:stack], %{}, fn item, acc ->
+    totalsize =
+      Enum.map(item[:data], &String.to_integer(Enum.at(String.split(&1, " "), 0))) |> Enum.sum()
+
+    Map.put(acc, item[:path], totalsize)
+  end)
+
+calculated_sizes =
+  Enum.reduce(pathsizes, %{}, fn item, state ->
+    path = elem(item, 0)
+    size = elem(item, 1)
+    dirs = Path.split(path)
+
+    paths_to_update =
+      for n <- 1..length(dirs) do
+        Enum.slice(dirs, 0, n)
+      end
+
+    Enum.reduce(paths_to_update, state, fn path, acc ->
+      {_, acc} =
+        Map.get_and_update(acc, Path.join(path), fn
+          nil -> {nil, size}
+          current_value -> {current_value, current_value + size}
+        end)
+
+      acc
+    end)
+  end)
+
+calculated_sizes
+|> Enum.filter(fn {path, size} ->
+  size <= 100_000
+end)
+|> Enum.reduce(0, fn {path, size}, acc -> acc + size end)
+```
+
+## Part 2
+
+```elixir
+total_size = calculated_sizes["/"]
+disk = 70_000_000
+required_min = 30_000_000
+left_size = disk - total_size
+to_free = required_min - left_size
+
+Enum.filter(calculated_sizes, fn {key, val} ->
+  val >= to_free
+end)
+|> Enum.sort(fn {_, val}, {_, val2} ->
+  val <= val2
+end)
+|> Enum.at(0)
+|> elem(1)
+```
