@@ -1,0 +1,95 @@
+# Day 8: Treetop Tree House
+
+```elixir
+Mix.install([:kino])
+```
+
+## Main
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input = Kino.Input.read(input) |> String.split("\n")
+```
+
+```elixir
+calculate_edges = fn list ->
+  length(list) * 2 + String.length(Enum.at(list, 0)) * 2 - 4
+end
+
+calculate_edges.(input)
+```
+
+```elixir
+calculate_visible_trees = fn list ->
+  tree_list =
+    Enum.map(list, &String.split(&1, "", trim: true))
+    |> Enum.map(fn item ->
+      Enum.map(item, &String.to_integer(&1))
+    end)
+
+  tree_column_list = Enum.zip(tree_list) |> Enum.map(&Tuple.to_list(&1))
+
+  for xid <- 1..(length(tree_list) - 2), yid <- 1..(length(Enum.at(tree_list, 0)) - 2) do
+    tree_row = Enum.at(tree_list, xid)
+    tree_col = Enum.at(tree_column_list, yid)
+    tree = Enum.at(tree_row, yid)
+
+    [
+      tree_row |> Enum.slice(0, yid) |> Enum.count(fn int -> int >= tree end) > 0,
+      tree_row
+      |> Enum.slice(yid + 1, length(tree_row) - yid - 1)
+      |> Enum.count(fn int -> int >= tree end) > 0,
+      tree_col
+      |> Enum.slice(xid + 1, length(tree_col) - xid - 1)
+      |> Enum.count(fn int -> int >= tree end) > 0,
+      tree_col |> Enum.slice(0, xid) |> Enum.count(fn int -> int >= tree end) > 0
+    ]
+    |> Enum.map(&(!&1))
+  end
+  |> Enum.count(fn item ->
+    Enum.any?(item)
+  end)
+end
+
+calculate_visible_trees.(input) + calculate_edges.(input)
+```
+
+## Part 2
+
+```elixir
+calc_to_highest = fn list, height ->
+  Enum.reduce_while(list, 0, fn i, acc ->
+    if i < height, do: {:cont, acc + 1}, else: {:halt, acc + 1}
+  end)
+end
+
+calculate_scenic_score = fn list ->
+  tree_list =
+    Enum.map(list, &String.split(&1, "", trim: true))
+    |> Enum.map(fn item ->
+      Enum.map(item, &String.to_integer(&1))
+    end)
+
+  tree_column_list = Enum.zip(tree_list) |> Enum.map(&Tuple.to_list(&1))
+
+  for xid <- 1..(length(tree_list) - 2), yid <- 1..(length(Enum.at(tree_list, 0)) - 2) do
+    tree_row = Enum.at(tree_list, xid)
+    tree_col = Enum.at(tree_column_list, yid)
+    tree = Enum.at(tree_row, yid)
+
+    [
+      tree_row |> Enum.slice(0, yid) |> Enum.reverse() |> calc_to_highest.(tree),
+      tree_row |> Enum.slice(yid + 1, length(tree_row) - yid - 1) |> calc_to_highest.(tree),
+      tree_col |> Enum.slice(xid + 1, length(tree_col) - xid - 1) |> calc_to_highest.(tree),
+      tree_col |> Enum.slice(0, xid) |> Enum.reverse() |> calc_to_highest.(tree)
+    ]
+    |> Enum.reduce(&(&1 * &2))
+  end
+  |> Enum.max()
+end
+
+calculate_scenic_score.(input)
+```
