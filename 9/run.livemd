@@ -1,0 +1,203 @@
+# Day 9: Rope Bridge
+
+```elixir
+Mix.install([:kino])
+```
+
+## Main
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input =
+  Kino.Input.read(input)
+  |> String.split("\n")
+  |> Enum.map(fn move ->
+    [dir, count] = String.split(move, " ")
+    [dir, String.to_integer(count)]
+  end)
+```
+
+```elixir
+distance_squared = fn x1, y1, x2, y2 ->
+  (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
+end
+
+moves = fn tail_x, tail_y ->
+  [
+    {tail_x + 1, tail_y},
+    {tail_x - 1, tail_y},
+    {tail_x, tail_y + 1},
+    {tail_x, tail_y - 1},
+    {tail_x + 1, tail_y + 1},
+    {tail_x + 1, tail_y - 1},
+    {tail_x - 1, tail_y + 1},
+    {tail_x - 1, tail_y - 1}
+  ]
+end
+
+move_tail = fn {head_x, head_y}, {tail_x, tail_y} ->
+  {_, new_tail_x, new_tail_y} =
+    Enum.map(moves.(tail_x, tail_y), fn {possible_tail_x, possible_tail_y} ->
+      {distance_squared.(head_x, head_y, possible_tail_x, possible_tail_y), possible_tail_x,
+       possible_tail_y}
+    end)
+    |> Enum.sort(fn {left_distance, _left_tail_x, _left_tail_y},
+                    {right_distance, _right_tail_x, _right_tail_y} ->
+      left_distance <= right_distance
+    end)
+    |> Enum.at(0)
+
+  {new_tail_x, new_tail_y}
+end
+
+maybe_move_tail = fn {head_x, head_y}, {tail_x, tail_y} ->
+  distance = distance_squared.(head_x, head_y, tail_x, tail_y)
+
+  if distance <= 2 do
+    {tail_x, tail_y}
+  else
+    move_tail.({head_x, head_y}, {tail_x, tail_y})
+  end
+end
+
+move_step = fn dir, rope = [{{head_x, head_y}, {tail_x, tail_y}} | _rest] ->
+  new_head =
+    case dir do
+      "U" -> {head_x, head_y + 1}
+      "D" -> {head_x, head_y - 1}
+      "L" -> {head_x - 1, head_y}
+      "R" -> {head_x + 1, head_y}
+    end
+
+  [{new_head, maybe_move_tail.(new_head, {tail_x, tail_y})} | rope]
+end
+
+exec_move = fn acc, [dir, count] = _move ->
+  Enum.reduce(1..count, acc, fn _move, %{:rope => rope, :visited => visited} ->
+    new_rope = move_step.(dir, rope)
+    [{_, tail_step} | _] = new_rope
+
+    %{
+      :rope => new_rope,
+      :visited => MapSet.put(visited, tail_step)
+    }
+  end)
+end
+
+run_moves = fn moves ->
+  acc = %{
+    :rope => [{{0, 0}, {0, 0}}],
+    :visited => MapSet.new()
+  }
+
+  Enum.reduce(moves, acc, fn move, acc ->
+    exec_move.(acc, move)
+  end)
+end
+
+%{:visited => visited} = run_moves.(input)
+MapSet.size(visited)
+```
+
+## Part 2
+
+```elixir
+distance_squared = fn x1, y1, x2, y2 ->
+  (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
+end
+
+moves = fn tail_x, tail_y ->
+  [
+    {tail_x + 1, tail_y},
+    {tail_x - 1, tail_y},
+    {tail_x, tail_y + 1},
+    {tail_x, tail_y - 1},
+    {tail_x + 1, tail_y + 1},
+    {tail_x + 1, tail_y - 1},
+    {tail_x - 1, tail_y + 1},
+    {tail_x - 1, tail_y - 1}
+  ]
+end
+
+move_tail = fn {head_x, head_y}, {tail_x, tail_y} ->
+  {_, new_tail_x, new_tail_y} =
+    Enum.map(moves.(tail_x, tail_y), fn {possible_tail_x, possible_tail_y} ->
+      {distance_squared.(head_x, head_y, possible_tail_x, possible_tail_y), possible_tail_x,
+       possible_tail_y}
+    end)
+    |> Enum.sort(fn {left_distance, _left_tail_x, _left_tail_y},
+                    {right_distance, _right_tail_x, _right_tail_y} ->
+      left_distance <= right_distance
+    end)
+    |> Enum.at(0)
+
+  {new_tail_x, new_tail_y}
+end
+
+maybe_move_tail = fn {head_x, head_y}, {tail_x, tail_y} ->
+  distance = distance_squared.(head_x, head_y, tail_x, tail_y)
+
+  if distance <= 2 do
+    {tail_x, tail_y}
+  else
+    move_tail.({head_x, head_y}, {tail_x, tail_y})
+  end
+end
+
+move_step = fn dir, rope = [{head_x, head_y} | rest] ->
+  new_head =
+    case dir do
+      "U" -> {head_x, head_y + 1}
+      "D" -> {head_x, head_y - 1}
+      "L" -> {head_x - 1, head_y}
+      "R" -> {head_x + 1, head_y}
+    end
+
+  {_, list} =
+    Enum.reduce(rest, {new_head, [new_head]}, fn current, {prev_move, list} ->
+      tail_move = maybe_move_tail.(prev_move, current)
+      {tail_move, [tail_move | list]}
+    end)
+
+  Enum.reverse(list)
+end
+
+exec_move = fn acc, [dir, count] = move ->
+  Enum.reduce(1..count, acc, fn move, %{:rope => rope, :visited => visited} ->
+    new_rope = move_step.(dir, rope)
+
+    %{
+      :rope => new_rope,
+      :visited => MapSet.put(visited, List.last(new_rope))
+    }
+  end)
+end
+
+run_moves = fn moves ->
+  acc = %{
+    :rope => [
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0}
+    ],
+    :visited => MapSet.new()
+  }
+
+  Enum.reduce(moves, acc, fn move, acc ->
+    exec_move.(acc, move)
+  end)
+end
+
+%{:visited => visited} = run_moves.(input)
+MapSet.size(visited)
+```
