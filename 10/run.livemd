@@ -1,0 +1,130 @@
+# Day 10: Cathode-Ray Tube
+
+```elixir
+Mix.install([:kino])
+```
+
+## Main
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input = Kino.Input.read(input) |> String.split("\n", trim: true)
+```
+
+```elixir
+defmodule CathodeTube do
+  def run(input) do
+    input
+    |> parse_commands()
+    |> run_commands()
+    |> extract_cycles()
+  end
+
+  defp extract_cycles(input) do
+    cycles_to_collect = [20, 60, 100, 140, 180, 220]
+
+    {total, _} =
+      Enum.reduce(cycles_to_collect, {0, Enum.reverse(input)}, fn cycle_num,
+                                                                  _acc = {total, input} ->
+        {_, registry_during, _} = Enum.at(input, cycle_num)
+        {registry_during * cycle_num + total, input}
+      end)
+
+    total
+  end
+
+  defp parse_commands(input) do
+    Enum.map(input, fn item ->
+      case item do
+        "addx " <> integer -> {:addx, String.to_integer(integer)}
+        "noop" -> {:noop}
+      end
+    end)
+  end
+
+  defp run_commands(input) do
+    Enum.reduce(input, [{0, 1, 1}], fn item, acc ->
+      run_command(item, acc)
+    end)
+  end
+
+  defp run_command({:noop}, acc = [{cycle_num, _reg_during, registry} | _rest]) do
+    [{cycle_num + 1, registry, registry} | acc]
+  end
+
+  defp run_command({:addx, value}, acc = [{cycle_num, _reg_during, registry} | _rest]) do
+    [{cycle_num + 2, registry, registry + value}, {cycle_num + 1, registry, registry} | acc]
+  end
+end
+
+CathodeTube.run(input)
+```
+
+## Part 2
+
+```elixir
+defmodule CathodeTube2 do
+  def run(input) do
+    input
+    |> parse_commands()
+    |> run_commands()
+    |> Enum.reverse()
+    |> draw_pixels()
+    |> elem(1)
+    |> Enum.reverse()
+    |> print_screen()
+  end
+
+  defp draw_pixels(input) do
+    List.delete_at(input, 0)
+    |> Enum.reduce({1, []}, fn {cycle, dur, _}, {_, crt} ->
+      real_cycle = rem(cycle, 40)
+      {dur, [draw_pixel(real_cycle - 1, dur) | crt]}
+    end)
+  end
+
+  defp draw_pixel(cycle, sprite_pos) do
+    if cycle in sprite(sprite_pos) do
+      "#"
+    else
+      "."
+    end
+  end
+
+  defp sprite(sprite), do: Range.new(sprite - 1, sprite + 1)
+
+  defp print_screen(crt) do
+    Enum.chunk_every(crt, 40)
+    |> Enum.each(fn pixels -> IO.inspect(Enum.join(pixels, "")) end)
+  end
+
+  defp parse_commands(input) do
+    Enum.map(input, fn item ->
+      case item do
+        "addx " <> integer -> {:addx, String.to_integer(integer)}
+        "noop" -> {:noop}
+      end
+    end)
+  end
+
+  defp run_commands(input) do
+    Enum.reduce(input, [{0, 1, 1}], fn item, acc ->
+      run_command(item, acc)
+    end)
+  end
+
+  defp run_command({:noop}, acc = [{cycle_num, _reg_during, registry} | _rest]) do
+    [{cycle_num + 1, registry, registry} | acc]
+  end
+
+  defp run_command({:addx, value}, acc = [{cycle_num, _reg_during, registry} | _rest]) do
+    [{cycle_num + 2, registry, registry + value}, {cycle_num + 1, registry, registry} | acc]
+  end
+end
+
+## ..##..#..##..
+CathodeTube2.run(input)
+```
